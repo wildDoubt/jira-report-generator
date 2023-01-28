@@ -1,9 +1,10 @@
 import requests
 from requests.auth import HTTPBasicAuth
-from src.utils import get_issue_fields, save_response_to_csv
+from src.utils import get_issue_fields, get_issues, save_df_csv
 from dotenv import load_dotenv
 import os
 import json
+import pandas as pd
 
 # load environment variables
 load_dotenv(verbose=True)
@@ -30,20 +31,23 @@ mock_input = {
 }
 
 
-def create_params(jql, fields):
+def create_params(jql, fields, start_at=0, max_results=100):
     params = {
         "jql": jql,
         "fields": list(map(lambda x: name_key_map[x], fields)),
         "fieldsByKeys": True,
-        "maxResults": 100,
+        "startAt": start_at,
+        "maxResults": max_results,
     }
 
     return params
 
 
-def get_issues_by_jql(GET_ISSUES_BY_JQL_URL, auth, headers, params):
-    return requests.request(
-        "GET", GET_ISSUES_BY_JQL_URL, headers=headers, params=params, auth=auth
+def get_issues_by_jql(GET_ISSUES_BY_JQL_URL, auth, headers, params) -> dict:
+    return json.loads(
+        requests.request(
+            "GET", GET_ISSUES_BY_JQL_URL, headers=headers, params=params, auth=auth
+        ).text
     )
 
 
@@ -68,4 +72,17 @@ if __name__ == "__main__":
 
     params = create_params(jql, fields)
     response = get_issues_by_jql(GET_ISSUES_BY_JQL_URL, auth, headers, params)
-    save_response_to_csv(filename, response, _filter)
+
+    result = pd.DataFrame()
+    result = pd.concat([result, get_issues(response, _filter)])
+
+    total = response["total"]
+    start_at = response["startAt"]
+    max_results = response["maxResults"]
+
+    if total > start_at + max_results:
+        params["startAt"] = start_at + max_results
+        response = get_issues_by_jql(GET_ISSUES_BY_JQL_URL, auth, headers, params)
+        result = pd.concat([result, get_issues(response, _filter)])
+
+    save_df_csv(filename, result)
