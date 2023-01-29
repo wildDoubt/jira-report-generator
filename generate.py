@@ -31,7 +31,7 @@ mock_input = {
 }
 
 
-def create_params(jql, fields, start_at=0, max_results=100):
+def create_params(jql, fields, start_at=0, max_results=10):
     params = {
         "jql": jql,
         "fields": list(map(lambda x: name_key_map[x], fields)),
@@ -66,6 +66,15 @@ def _filter(obj: dict):
     )
 
 
+def task(_filter, response, result):
+    result = pd.concat([result, get_issues(response, _filter)])
+
+    total = response["total"]
+    start_at = response["startAt"]
+    max_results = response["maxResults"]
+    return result, total, start_at, max_results
+
+
 if __name__ == "__main__":
     filename, jql, fields = mock_input.values()
     fields = [ISSUE_KEY] + fields
@@ -74,15 +83,13 @@ if __name__ == "__main__":
     response = get_issues_by_jql(GET_ISSUES_BY_JQL_URL, auth, headers, params)
 
     result = pd.DataFrame()
-    result = pd.concat([result, get_issues(response, _filter)])
+    while True:
+        result, total, start_at, max_results = task(_filter, response, result)
 
-    total = response["total"]
-    start_at = response["startAt"]
-    max_results = response["maxResults"]
-
-    if total > start_at + max_results:
-        params["startAt"] = start_at + max_results
-        response = get_issues_by_jql(GET_ISSUES_BY_JQL_URL, auth, headers, params)
-        result = pd.concat([result, get_issues(response, _filter)])
-
+        if total > start_at + max_results:
+            print(f"{start_at} 시작")
+            params["startAt"] = start_at + max_results
+            response = get_issues_by_jql(GET_ISSUES_BY_JQL_URL, auth, headers, params)
+            continue
+        break
     save_df_csv(filename, result)
