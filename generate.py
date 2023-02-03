@@ -74,15 +74,23 @@ def task(_filter, response, result):
     max_results = response["maxResults"]
     return result, total, start_at, max_results
 
+
 def get_value_in_dict_by_key(obj: dict, field_name: str):
     return obj["fields"][name_key_map[field_name]].get("name", "None")
 
 
 def beautify_result(result):
-    result['Time to first response'] = result['Time to first response'].apply(lambda x: x.get('ongoingCycle').get('remainingTime').get('friendly', 'None'))
-    result['Organizations'] = result['Organizations'].apply(lambda x: x[0].get('name', 'None'))
-    result['Reporter'] = result['Reporter'].apply(lambda x: x.get('emailAddress', 'None'))
+    result["Time to first response"] = result["Time to first response"].apply(
+        lambda x: x.get("ongoingCycle").get("remainingTime").get("friendly", "None")
+    )
+    result["Organizations"] = result["Organizations"].apply(
+        lambda x: x[0].get("name", "None")
+    )
+    result["Reporter"] = result["Reporter"].apply(
+        lambda x: x.get("emailAddress", "None")
+    )
     return result
+
 
 if __name__ == "__main__":
     filename, jql, fields = mock_input.values()
@@ -94,9 +102,9 @@ if __name__ == "__main__":
     result = pd.DataFrame()
     while True:
         result, total, start_at, max_results = task(_filter, response, result)
-        print(list(result['Time to first response'].items()))
+
         result = beautify_result(result)
-        
+
         if total > start_at + max_results:
             params["startAt"] = start_at + max_results
             response = get_issues_by_jql(GET_ISSUES_BY_JQL_URL, auth, headers, params)
