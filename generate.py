@@ -54,7 +54,7 @@ def beautify_result(obj):
     return obj
 
 
-def initialize_variables():
+def initialize_variables(filename, jql, fields):
     auth = HTTPBasicAuth(
         os.getenv("USER_EMAIL"),
         os.getenv("USER_API_TOKEN"),
@@ -65,13 +65,6 @@ def initialize_variables():
     # Column name -> key로 변환하기 위한 딕셔너리
     name_key_map = get_issue_fields(GET_ISSUE_FIELD_URL, auth, headers)
 
-    mock_input = {
-        "filename": os.getenv("FILENAME"),
-        "jql": os.getenv("JQL"),
-        "fields": json.loads(os.getenv("FIELDS")),
-    }
-
-    filename, jql, fields = mock_input.values()
     fields = [ISSUE_KEY] + fields
     params = create_params(jql, fields, name_key_map)
 
@@ -80,7 +73,18 @@ def initialize_variables():
     return name_key_map, filename, fields, params, response
 
 
+mock_input = {
+    "filename": os.getenv("FILENAME"),
+    "jql": os.getenv("JQL"),
+    "fields": json.loads(os.getenv("FIELDS")),
+}
+
+
 if __name__ == "__main__":
+    # get input
+    # todo: argparse
+    input_filename, input_jql, input_fields = mock_input.values()
+
     # prepare params and fields
     (
         name_key_map,
@@ -88,7 +92,7 @@ if __name__ == "__main__":
         fields,
         params,
         response,
-    ) = initialize_variables()
+    ) = initialize_variables(input_filename, input_jql, input_fields)
 
     # process issues
     result = pd.DataFrame()
